@@ -1,6 +1,8 @@
 from collections import defaultdict
 from dataclasses import dataclass
 
+from .. import bgg
+
 
 @dataclass(frozen=True)
 class Field:
@@ -56,6 +58,11 @@ class Game:
     match_fields: tuple[Field, ...] = ()
     # Fields recorded once per player (e.g. deck, character, faction).
     player_fields: tuple[Field, ...] = ()
+    # Page template for this game's stats page. Games with a custom page set their own.
+    template: str = "game.html"
+
+    def bgg_info(self) -> "bgg.BggInfo | None":
+        return bgg.fetch(self.bgg_id) if self.bgg_id else None
 
     # ---- form handling -------------------------------------------------
 

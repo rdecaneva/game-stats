@@ -20,6 +20,16 @@ CREATE TABLE IF NOT EXISTS participants (
     details  TEXT NOT NULL DEFAULT '{}'
 );
 
+CREATE TABLE IF NOT EXISTS games (
+    key        TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    bgg_id     INTEGER,
+    year       TEXT,
+    designers  TEXT NOT NULL DEFAULT '[]',
+    thumbnail  TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_matches_game ON matches(game, played_on);
 CREATE INDEX IF NOT EXISTS idx_participants_match ON participants(match_id);
 """
@@ -49,6 +59,27 @@ def connect():
 def init_db() -> None:
     with connect() as conn:
         conn.executescript(SCHEMA)
+
+
+def load_added_games() -> list[dict]:
+    """Games added from BoardGameGeek search (not defined in code)."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT key, name, bgg_id, year, designers, thumbnail FROM games ORDER BY name"
+        ).fetchall()
+    return [
+        {**dict(r), "designers": json.loads(r["designers"])} for r in rows
+    ]
+
+
+def save_added_game(key: str, name: str, bgg_id: int, year: str | None,
+                    designers: list[str], thumbnail: str | None) -> None:
+    with connect() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO games (key, name, bgg_id, year, designers, thumbnail) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (key, name, bgg_id, year, json.dumps(designers), thumbnail),
+        )
 
 
 def insert_match(game: str, played_on: str, details: dict, participants: list[dict]) -> int:

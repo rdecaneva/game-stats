@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Games · Game Stats{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Games</h1>
+</div>
+
+<form method="get" action="/games" class="search card">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search games" aria-label="Search games">
+  <button type="submit" class="btn btn-primary">Search</button>
+</form>
+
+<div class="grid">
+  {% for g in games %}
+  <a class="card link-card" href="/games/{{ g.key }}">
+    <span class="card-title">{{ g.name }}</span>
+    <span class="muted">View stats →</span>
+  </a>
+  {% endfor %}
+</div>
+
+{% if q and not games %}
+<h2>Add from BoardGameGeek</h2>
+  {% if not bgg_configured %}
+  <p class="muted">BoardGameGeek search isn't configured yet. Set BGG_API_TOKEN on the server to search.</p>
+  {% elif found %}
+  <div class="match-list">
+    {% for r in found %}
+    <div class="match">
+      <div class="match-main">
+        <span class="match-date">{{ r.name }}</span>
+        {% if r.year %}<span class="tag">{{ r.year }}</span>{% endif %}
+      </div>
+      {% if r.id in already_added %}
+      <p class="muted small">Already added.</p>
+      {% else %}
+      <form method="post" action="/games/add">
+        <input type="hidden" name="bgg_id" value="{{ r.id }}">
+        <input type="hidden" name="name" value="{{ r.name }}">
+        <button type="submit" class="btn btn-small btn-primary">Add game</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">No BoardGameGeek results for “{{ q }}”.</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

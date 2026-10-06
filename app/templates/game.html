@@ -19,6 +19,8 @@
   <a class="btn btn-primary" href="/games/{{ game.key }}/new">+ New match</a>
 </div>
 
+{% block intro %}{% endblock %}
+
 <section class="summary">
   {% for label, value in summary %}
   <div class="stat">
