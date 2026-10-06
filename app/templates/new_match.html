@@ -87,17 +87,21 @@
       toggle.setAttribute("aria-expanded", String(open));
     }
 
-    function fill(combo) {
+    // Fill the list with names containing query (all names when query is empty).
+    // Returns how many were shown.
+    function fill(combo, query) {
       var list = combo.querySelector(".combo-list");
+      var q = (query || "").trim().toLowerCase();
+      var shown = q ? names.filter(function (n) { return n.toLowerCase().indexOf(q) !== -1; }) : names;
       list.innerHTML = "";
       if (!names.length) {
         var empty = document.createElement("li");
         empty.className = "combo-empty";
         empty.textContent = "No players yet";
         list.appendChild(empty);
-        return;
+        return 0;
       }
-      names.forEach(function (name) {
+      shown.forEach(function (name) {
         var item = document.createElement("li");
         var pick = document.createElement("button");
         pick.type = "button";
@@ -109,11 +113,18 @@
         item.appendChild(pick);
         list.appendChild(item);
       });
+      return shown.length;
     }
 
     combos.forEach(function (combo) {
-      fill(combo);
+      fill(combo, "");
+      var input = combo.querySelector("input");
+      input.addEventListener("input", function () {
+        var count = fill(combo, input.value);
+        setOpen(combo, count > 0);
+      });
       combo.querySelector(".combo-toggle").addEventListener("click", function () {
+        fill(combo, "");
         var open = combo.querySelector(".combo-list").hidden;
         closeAll(combo);
         setOpen(combo, open);
