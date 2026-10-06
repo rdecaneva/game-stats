@@ -5,11 +5,13 @@
   <h1>Games</h1>
 </div>
 
-<form method="get" action="/games" class="search card">
-  <input type="search" name="q" value="{{ q }}" placeholder="Search games" aria-label="Search games">
+<form method="get" action="/games" class="search card" id="game-search">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search games" aria-label="Search games"
+         autocomplete="off" autofocus>
   <button type="submit" class="btn btn-primary">Search</button>
 </form>
 
+<div id="results">
 <div class="grid">
   {% for g in games %}
   <a class="card link-card" href="/games/{{ g.key }}">
@@ -47,4 +49,37 @@
   <p class="muted">No BoardGameGeek results for “{{ q }}”.</p>
   {% endif %}
 {% endif %}
+</div>
+
+<script>
+  // Search as you type: refresh the results area from the same /games URL.
+  (function () {
+    var form = document.getElementById("game-search");
+    var input = form.querySelector("input[name=q]");
+    var results = document.getElementById("results");
+    var timer = null;
+    var current = 0;
+
+    form.addEventListener("submit", function (e) { e.preventDefault(); run(); });
+    input.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(run, 250);
+    });
+
+    function run() {
+      var q = input.value.trim();
+      var id = ++current;
+      var url = "/games" + (q ? "?q=" + encodeURIComponent(q) : "");
+      fetch(url, { headers: { "X-Requested-With": "fetch" } })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          if (id !== current) return;
+          var doc = new DOMParser().parseFromString(html, "text/html");
+          var next = doc.getElementById("results");
+          if (next) results.innerHTML = next.innerHTML;
+          history.replaceState(null, "", url);
+        });
+    }
+  })();
+</script>
 {% endblock %}
