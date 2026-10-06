@@ -318,3 +318,34 @@ fieldset.player-row legend { padding: 0 0.3rem; color: var(--muted); font-size: 
 .btn-primary { border-color: transparent; }
 input, select, textarea { border-radius: 12px; }
 .tag, .chip { border-radius: 999px; }
+
+/* ---- form page header (green bar with round buttons) ---- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 2.6rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--topbar);
+  color: var(--topbar-text);
+  padding: 0.6rem 0.75rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+}
+.app-header-title { text-align: center; font-weight: 700; font-size: 1.05rem; }
+.round-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+}
+.round-btn-text { width: auto; padding: 0 0.9rem; font-size: 0.9rem; }

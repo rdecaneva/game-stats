@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
 </head>
 <body>
+  {% block header %}
   <header class="topbar">
     <a href="/" class="brand">Game Stats</a>
     <nav class="nav">
@@ -24,6 +25,7 @@
       {% endif %}
     </nav>
   </header>
+  {% endblock %}
   <main class="container">
     {% block content %}{% endblock %}
   </main>

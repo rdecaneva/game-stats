@@ -1,10 +1,16 @@
 {% extends "base.html" %}
 {% from "_fields.html" import input %}
 {% block title %}New match · {{ game.name }}{% endblock %}
+{% block header %}
+<header class="app-header">
+  <a class="round-btn" href="/games/{{ game.key }}" aria-label="Back">&#8249;</a>
+  <span class="app-header-title">New match</span>
+  <a class="round-btn round-btn-text" href="/games/{{ game.key }}">Cancel</a>
+</header>
+{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>New {{ game.name }} match</h1>
-  <a class="muted" href="/games/{{ game.key }}">Cancel</a>
 </div>
 
 {% if errors %}
