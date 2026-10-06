@@ -33,7 +33,9 @@
   <p class="muted small">Fill in at least two. Tap the circle next to the winner (optional).</p>
 
   {% for i in range(game.max_players) %}
-  <fieldset class="player-row">
+  {% set has_value = values.get('player_%d_name' % i) %}
+  {% set hidden_row = i > 0 and not has_value %}
+  <fieldset class="player-row" data-player-row {% if hidden_row %}hidden disabled{% endif %}>
     <legend>Player {{ i + 1 }}</legend>
     <label class="field">
       <span class="field-label">Name</span>
@@ -50,6 +52,8 @@
   </fieldset>
   {% endfor %}
 
+  <button type="button" class="btn btn-block" id="add-player">+ Add player</button>
+
   <datalist id="names">
     {% for name in suggestions.get('player', []) %}<option value="{{ name }}">{% endfor %}
   </datalist>
@@ -61,4 +65,27 @@
 
   <button type="submit" class="btn btn-primary btn-block">Save match</button>
 </form>
+
+<script>
+  // Players appear one at a time: hidden slots are disabled so they aren't submitted.
+  (function () {
+    var button = document.getElementById("add-player");
+    var rows = Array.prototype.slice.call(document.querySelectorAll("[data-player-row]"));
+
+    function nextHidden() {
+      return rows.filter(function (row) { return row.hidden; })[0];
+    }
+
+    button.addEventListener("click", function () {
+      var row = nextHidden();
+      if (!row) return;
+      row.hidden = false;
+      row.disabled = false;
+      row.querySelector("input[name$='_name']").focus();
+      if (!nextHidden()) button.hidden = true;
+    });
+
+    if (!nextHidden()) button.hidden = true;
+  })();
+</script>
 {% endblock %}
