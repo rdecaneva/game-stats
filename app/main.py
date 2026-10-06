@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from . import bgg
 from .db import delete_match, init_db, insert_match, load_matches
 from .games import GAMES
 from .games.base import Game
@@ -67,6 +68,7 @@ def game_page(request: Request, key: str):
         "game.html",
         {
             "game": game,
+            "bgg": bgg.fetch(game.bgg_id) if game.bgg_id else None,
             "summary": game.summary(matches),
             "tables": game.stats(matches),
             "matches": [_describe(game, m) for m in matches],

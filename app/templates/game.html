@@ -2,7 +2,18 @@
 {% block title %}{{ game.name }} · Game Stats{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>{{ game.name }}</h1>
+  <div class="game-head">
+    {% if bgg and bgg.thumbnail %}
+    <img class="game-thumb" src="{{ bgg.thumbnail }}" alt="{{ game.name }} cover" loading="lazy">
+    {% endif %}
+    <div>
+      <h1>{{ game.name }}</h1>
+      {% if bgg %}
+      <div class="game-meta">Released: {{ bgg.year or "—" }}</div>
+      <div class="game-meta">Author: {{ bgg.designers | join(", ") or "—" }}</div>
+      {% endif %}
+    </div>
+  </div>
   <a class="btn btn-primary" href="/games/{{ game.key }}/new">+ New match</a>
 </div>
 

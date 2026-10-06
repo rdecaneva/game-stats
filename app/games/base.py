@@ -50,6 +50,8 @@ class Game:
 
     key: str = ""
     name: str = ""
+    # BoardGameGeek thing id, used for the thumbnail, release year and designer.
+    bgg_id: int | None = None
     max_players: int = 4
     match_fields: tuple[Field, ...] = ()
     # Fields recorded once per player (e.g. deck, character, faction).
