@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Games</h1>
+<div class="grid">
+  {% for g in games %}
+  <a class="card link-card" href="/games/{{ g.key }}">
+    <span class="card-title">{{ g.name }}</span>
+    <span class="muted">View stats →</span>
+  </a>
+  {% endfor %}
+</div>
+
+<h2>Recent matches</h2>
+{% if recent %}
+  {% set show_game = true %}
+  {% include "_match_list.html" %}
+{% else %}
+  <p class="muted">No matches recorded yet. Pick a game above to log your first one.</p>
+{% endif %}
+{% endblock %}

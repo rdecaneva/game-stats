@@ -1,0 +1,13 @@
+<ul class="match-list">
+  {% for m in recent %}
+  <li class="match">
+    <div class="match-main">
+      <span class="match-date">{{ m.played_on }}</span>
+      {% if m.game_name is defined and show_game %}<span class="tag">{{ m.game_name }}</span>{% endif %}
+      {% if m.details.format %}<span class="tag">{{ m.details.format }}</span>{% endif %}
+    </div>
+    <div class="match-players">{{ m.players }}</div>
+    <div class="muted">{% if m.winner %}Winner: <strong>{{ m.winner }}</strong>{% else %}No winner recorded{% endif %}</div>
+  </li>
+  {% endfor %}
+</ul>

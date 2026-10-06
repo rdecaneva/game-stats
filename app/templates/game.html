@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ game.name }} · Game Stats{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ game.name }}</h1>
+  <a class="btn btn-primary" href="/games/{{ game.key }}/new">+ New match</a>
+</div>
+
+<section class="summary">
+  {% for label, value in summary %}
+  <div class="stat">
+    <span class="stat-value">{{ value }}</span>
+    <span class="stat-label">{{ label }}</span>
+  </div>
+  {% endfor %}
+</section>
+
+{% for table in tables %}
+<section class="card">
+  <h2>{{ table.title }}</h2>
+  {% if table.rows %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr>{% for h in table.headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for row in table.rows %}
+        <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">Nothing here yet.</p>
+  {% endif %}
+</section>
+{% endfor %}
+
+<h2>Matches</h2>
+{% if matches %}
+<ul class="match-list">
+  {% for m in matches %}
+  <li class="match">
+    <div class="match-main">
+      <span class="match-date">{{ m.played_on }}</span>
+      {% if m.details.format %}<span class="tag">{{ m.details.format }}</span>{% endif %}
+      {% if m.details.turns %}<span class="tag">{{ m.details.turns }} turns</span>{% endif %}
+    </div>
+    <div class="match-players">{{ m.players }}</div>
+    <div class="muted">{% if m.winner %}Winner: <strong>{{ m.winner }}</strong>{% else %}No winner recorded{% endif %}</div>
+    {% if m.details.notes %}<p class="notes">{{ m.details.notes }}</p>{% endif %}
+    <form method="post" action="/games/{{ game.key }}/matches/{{ m.id }}/delete"
+          onsubmit="return confirm('Delete this match?');" class="inline-form">
+      <button type="submit" class="btn btn-danger btn-small">Delete</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No matches yet.</p>
+{% endif %}
+{% endblock %}
