@@ -323,6 +323,7 @@ input, select, textarea { border-radius: 12px; }
 .game-head { display: flex; gap: 0.9rem; align-items: center; }
 .game-head h1 { margin: 0 0 0.25rem; font-weight: 800; }
 .game-thumb { width: 84px; height: 84px; object-fit: contain; border-radius: 12px; flex: 0 0 84px; background: var(--card); }
+.game-thumb-empty { border: 1px dashed var(--line); }
 .game-meta { color: var(--muted); font-size: 0.9rem; }
 
 /* ---- form page header (green bar with round buttons) ---- */

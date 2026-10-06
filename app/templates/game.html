@@ -5,6 +5,8 @@
   <div class="game-head">
     {% if bgg and bgg.thumbnail %}
     <img class="game-thumb" src="{{ bgg.thumbnail }}" alt="{{ game.name }} cover" loading="lazy">
+    {% else %}
+    <div class="game-thumb game-thumb-empty" aria-hidden="true"></div>
     {% endif %}
     <div>
       <h1>{{ game.name }}</h1>
