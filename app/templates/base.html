@@ -4,11 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Game Stats{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
 </head>
 <body>
   <header class="topbar">
     <a href="/" class="brand">Game Stats</a>
+    <nav class="nav">
+      <a href="/players">Players</a>
+      {% if request.state.player %}
+      <a href="/players/{{ request.state.player.id }}/edit">My details</a>
+      <form method="post" action="/logout" class="inline-form">
+        <button class="link-btn" type="submit">Log out</button>
+      </form>
+      {% else %}
+      <a href="/login">Log in</a>
+      {% endif %}
+    </nav>
   </header>
   <main class="container">
     {% block content %}{% endblock %}
