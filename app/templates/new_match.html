@@ -37,11 +37,15 @@
   {% set hidden_row = i > 0 and not has_value %}
   <fieldset class="player-row" data-player-row {% if hidden_row %}hidden disabled{% endif %}>
     <legend>Player {{ i + 1 }}</legend>
-    <label class="field">
+    <div class="field">
       <span class="field-label">Name</span>
-      <input type="text" name="player_{{ i }}_name" value="{{ values.get('player_%d_name' % i) or '' }}"
-             list="names" autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other">
-    </label>
+      <div class="combo" data-combo>
+        <input type="text" name="player_{{ i }}_name" value="{{ values.get('player_%d_name' % i) or '' }}"
+               autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other">
+        <button type="button" class="combo-toggle" aria-label="Show players" aria-expanded="false">▾</button>
+        <ul class="combo-list" hidden></ul>
+      </div>
+    </div>
     {% for f in game.player_fields %}
       {{ input(f, values.get('player_%d_%s' % (i, f.name)), listid=f.name ~ '-list') }}
     {% endfor %}
@@ -54,9 +58,7 @@
 
   <button type="button" class="btn btn-block" id="add-player">+ Add player</button>
 
-  <datalist id="names">
-    {% for name in suggestions.get('player', []) %}<option value="{{ name }}">{% endfor %}
-  </datalist>
+  <script id="player-names" type="application/json">{{ suggestions.get('player', []) | tojson }}</script>
   {% for f in game.player_fields %}
   <datalist id="{{ f.name }}-list">
     {% for s in suggestions.get(f.name, []) %}<option value="{{ s }}">{% endfor %}
@@ -67,6 +69,64 @@
 </form>
 
 <script>
+  // Player name dropdowns: a button opens the players used before; picking one fills the name.
+  (function () {
+    var names = JSON.parse(document.getElementById("player-names").textContent);
+    var combos = Array.prototype.slice.call(document.querySelectorAll("[data-combo]"));
+
+    function closeAll(except) {
+      combos.forEach(function (combo) {
+        if (combo !== except) setOpen(combo, false);
+      });
+    }
+
+    function setOpen(combo, open) {
+      var list = combo.querySelector(".combo-list");
+      var toggle = combo.querySelector(".combo-toggle");
+      list.hidden = !open;
+      toggle.setAttribute("aria-expanded", String(open));
+    }
+
+    function fill(combo) {
+      var list = combo.querySelector(".combo-list");
+      list.innerHTML = "";
+      if (!names.length) {
+        var empty = document.createElement("li");
+        empty.className = "combo-empty";
+        empty.textContent = "No players yet";
+        list.appendChild(empty);
+        return;
+      }
+      names.forEach(function (name) {
+        var item = document.createElement("li");
+        var pick = document.createElement("button");
+        pick.type = "button";
+        pick.textContent = name;
+        pick.addEventListener("click", function () {
+          combo.querySelector("input").value = name;
+          setOpen(combo, false);
+        });
+        item.appendChild(pick);
+        list.appendChild(item);
+      });
+    }
+
+    combos.forEach(function (combo) {
+      fill(combo);
+      combo.querySelector(".combo-toggle").addEventListener("click", function () {
+        var open = combo.querySelector(".combo-list").hidden;
+        closeAll(combo);
+        setOpen(combo, open);
+      });
+    });
+
+    document.addEventListener("click", function (e) {
+      combos.forEach(function (combo) {
+        if (!combo.contains(e.target)) setOpen(combo, false);
+      });
+    });
+  })();
+
   // Players appear one at a time: hidden slots are disabled so they aren't submitted.
   (function () {
     var button = document.getElementById("add-player");
