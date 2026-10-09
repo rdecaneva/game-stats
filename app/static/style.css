@@ -57,6 +57,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -332,7 +333,7 @@ table.player-table .winner-cell input[type="checkbox"] { width: 15px; height: 15
 .details dt { font-weight: 600; color: var(--muted); font-size: 0.85rem; }
 .details dd { margin: 0; }
 
-/* ---- charts, filters ---- */
+/* ---- charts, filters, timer ---- */
 .chart { width: 100%; height: auto; display: block; overflow: visible; }
 .chart .grid { stroke: var(--line); stroke-width: 1; }
 .chart .baseline { stroke: var(--muted); stroke-width: 1; }
@@ -352,3 +353,52 @@ table.player-table .winner-cell input[type="checkbox"] { width: 15px; height: 15
 .chip-on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 
 .check { display: flex; align-items: center; gap: 0.5rem; margin: 0.4rem 0; font-size: 0.9rem; }
+.timer { border: 1px solid var(--line); border-radius: var(--radius); padding: 0.8rem 1rem; margin-bottom: 1rem; }
+.timer-display { font-size: 2rem; font-weight: 700; margin: 0.2rem 0; }
+.timer-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* ---- BG Stats-inspired shapes (colors and font unchanged) ---- */
+:root { --radius: 14px; }
+.card, .match, .stat { box-shadow: 0 1px 3px rgb(0 0 0 / 0.06); border-width: 0; }
+.btn { border-radius: 999px; font-weight: 700; }
+.btn-primary { border-color: transparent; }
+input, select, textarea { border-radius: 12px; }
+.tag, .chip { border-radius: 999px; }
+
+/* ---- game header with BGG thumbnail ---- */
+.game-head { display: flex; gap: 1.25rem; align-items: center; padding: 0.6rem 0; }
+.game-head h1 { margin: 0 0 0.25rem; font-weight: 800; }
+.game-thumb { width: 84px; height: 84px; object-fit: contain; border-radius: 12px; flex: 0 0 84px; background: var(--card); }
+.game-thumb-empty { border: 1px dashed var(--line); }
+.game-meta { color: var(--muted); font-size: 0.9rem; }
+
+/* ---- form page header (green bar with round buttons) ---- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 2.6rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--topbar);
+  color: var(--topbar-text);
+  padding: 0.6rem 0.75rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+}
+.app-header-title { text-align: center; font-weight: 700; font-size: 1.05rem; }
+.round-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+}
+.round-btn-text { width: auto; padding: 0 0.9rem; font-size: 0.9rem; }

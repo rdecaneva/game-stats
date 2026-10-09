@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS matches (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     game             TEXT NOT NULL,
     played_on        TEXT NOT NULL,
+    played_at        TEXT,
     details          TEXT NOT NULL DEFAULT '{}',
     location_id      INTEGER REFERENCES locations(id),
     duration_seconds INTEGER,
@@ -58,6 +59,21 @@ CREATE TABLE IF NOT EXISTS participants (
     score     INTEGER,
     rank      INTEGER,
     details   TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS games (
+    key        TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    bgg_id     INTEGER,
+    year       TEXT,
+    designers  TEXT NOT NULL DEFAULT '[]',
+    thumbnail  TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_matches_game ON matches(game, played_on);
@@ -109,6 +125,8 @@ def init_db() -> None:
             conn.execute("ALTER TABLE matches ADD COLUMN location_id INTEGER REFERENCES locations(id)")
         if "duration_seconds" not in match_cols:
             conn.execute("ALTER TABLE matches ADD COLUMN duration_seconds INTEGER")
+        if "played_at" not in match_cols:
+            conn.execute("ALTER TABLE matches ADD COLUMN played_at TEXT")
         # Older participants required a player and had no guest, non-player, score or rank.
         # SQLite can't drop NOT NULL in place, so rebuild the table and keep the rows.
         if "label" not in _columns(conn, "participants"):
@@ -373,18 +391,67 @@ def insert_match(
     played_on: str,
     details: dict,
     participants: list[dict],
+    played_at: str | None = None,
     location_id: int | None = None,
     duration_seconds: int | None = None,
 ) -> int:
     with connect() as conn:
         cur = conn.execute(
-            """INSERT INTO matches (game, played_on, details, location_id, duration_seconds)
-               VALUES (?, ?, ?, ?, ?)""",
-            (game, played_on, json.dumps(details), location_id, duration_seconds),
+            """INSERT INTO matches (game, played_on, played_at, details, location_id, duration_seconds)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (game, played_on, played_at, json.dumps(details), location_id, duration_seconds),
         )
         match_id = cur.lastrowid
         _insert_participants(conn, match_id, participants)
     return match_id
+
+
+def load_added_games() -> list[dict]:
+    """Games added from BoardGameGeek search (not defined in code)."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT key, name, bgg_id, year, designers, thumbnail FROM games ORDER BY name"
+        ).fetchall()
+    return [
+        {**dict(r), "designers": json.loads(r["designers"])} for r in rows
+    ]
+
+
+def save_added_game(key: str, name: str, bgg_id: int, year: str | None,
+                    designers: list[str], thumbnail: str | None) -> None:
+    with connect() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO games (key, name, bgg_id, year, designers, thumbnail) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (key, name, bgg_id, year, json.dumps(designers), thumbnail),
+        )
+
+
+def get_setting(key: str) -> str | None:
+    with connect() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    return row["value"] if row else None
+
+
+def set_setting(key: str, value: str) -> None:
+    with connect() as conn:
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, value),
+        )
+
+
+def recently_played_games(limit: int = 10) -> list[str]:
+    """Game keys with at least one match, most recently played first."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT game FROM matches "
+            "GROUP BY game ORDER BY MAX(played_on || ' ' || COALESCE(played_at, '')) DESC "
+            "LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [r["game"] for r in rows]
 
 
 def update_match(
@@ -392,14 +459,15 @@ def update_match(
     played_on: str,
     details: dict,
     participants: list[dict],
+    played_at: str | None = None,
     location_id: int | None = None,
     duration_seconds: int | None = None,
 ) -> None:
     with connect() as conn:
         conn.execute(
-            """UPDATE matches SET played_on = ?, details = ?, location_id = ?, duration_seconds = ?
-               WHERE id = ?""",
-            (played_on, json.dumps(details), location_id, duration_seconds, match_id),
+            """UPDATE matches SET played_on = ?, played_at = ?, details = ?, location_id = ?,
+                   duration_seconds = ? WHERE id = ?""",
+            (played_on, played_at, json.dumps(details), location_id, duration_seconds, match_id),
         )
         conn.execute("DELETE FROM participants WHERE match_id = ?", (match_id,))
         _insert_participants(conn, match_id, participants)
@@ -414,7 +482,7 @@ def load_matches(
     game: str | None = None, limit: int | None = None, match_id: int | None = None
 ) -> list[dict]:
     """Return matches (newest first) with their participants attached."""
-    sql = """SELECT m.id, m.game, m.played_on, m.details, m.duration_seconds,
+    sql = """SELECT m.id, m.game, m.played_on, m.played_at, m.details, m.duration_seconds,
                     m.location_id, l.name AS location
              FROM matches m LEFT JOIN locations l ON l.id = m.location_id"""
     clauses: list[str] = []
@@ -427,7 +495,7 @@ def load_matches(
         args.append(match_id)
     if clauses:
         sql += " WHERE " + " AND ".join(clauses)
-    sql += " ORDER BY m.played_on DESC, m.id DESC"
+    sql += " ORDER BY m.played_on DESC, m.played_at DESC, m.id DESC"
     if limit is not None:
         sql += " LIMIT ?"
         args.append(limit)
@@ -468,6 +536,7 @@ def load_matches(
             "id": r["id"],
             "game": r["game"],
             "played_on": r["played_on"],
+            "played_at": r["played_at"],
             "details": json.loads(r["details"]),
             "duration_seconds": r["duration_seconds"],
             "location_id": r["location_id"],

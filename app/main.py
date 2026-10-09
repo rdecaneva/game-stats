@@ -1,3 +1,4 @@
+import os
 import re
 import secrets
 from contextlib import asynccontextmanager
@@ -10,9 +11,19 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import auth, charts, db, stats
-from .db import delete_match, init_db, insert_match, load_matches, update_match
-from .games import GAMES
+from . import auth, bgg, charts, db, stats
+from .db import (
+    delete_match,
+    get_setting,
+    init_db,
+    insert_match,
+    load_matches,
+    recently_played_games,
+    save_added_game,
+    set_setting,
+    update_match,
+)
+from .games import all_games, get_game
 from .games.base import Game, Table
 from .players import validate_player
 from .ranking import assign_ranks
@@ -56,7 +67,7 @@ async def attach_session(request: Request, call_next):
 
 
 def _get_game(key: str) -> Game:
-    game = GAMES.get(key)
+    game = get_game(key)
     if game is None:
         raise HTTPException(status_code=404, detail="Unknown game")
     return game
@@ -71,6 +82,7 @@ def _describe(game: Game, match: dict) -> dict:
         "game_key": game.key,
         "game_name": game.name,
         "played_on": match["played_on"],
+        "played_at": match["played_at"],
         "players": ", ".join(p["player"] for p in match["participants"]),
         "winner": ", ".join(winners) if winners else None,
         "details": match["details"],
@@ -106,14 +118,57 @@ def home(request: Request):
 
 
 @app.get("/games", response_class=HTMLResponse)
-def games_list(request: Request, q: str = ""):
-    needle = db.norm(q)
-    games = [g for g in GAMES.values() if needle in db.norm(g.name)]
+def games_index(request: Request, q: str = ""):
+    q = q.strip()
+    games = all_games()
+    if q:
+        needle = db.norm(q)
+        matches = [g for g in games.values() if needle in db.norm(g.name)]
+    else:
+        recent_keys = recently_played_games(limit=10)
+        matches = [games[key] for key in recent_keys if key in games]
+        if not matches:
+            matches = list(games.values())
+    # Only search BoardGameGeek when the query has no local match, to avoid needless lookups.
+    found = bgg.search(q) if q and not matches else []
+    recent = [
+        _describe(games[m["game"]], m) for m in load_matches(limit=10) if m["game"] in games
+    ]
     return templates.TemplateResponse(
         request,
-        "index.html",
-        {"games": games, "q": q},
+        "games.html",
+        {
+            "q": q,
+            "games": matches,
+            "found": found,
+            "bgg_configured": bgg.configured(),
+            "already_added": {g.bgg_id for g in games.values() if g.bgg_id},
+            "recent": recent,
+        },
     )
+
+
+@app.post("/games/add")
+async def add_game(request: Request):
+    form = await request.form()
+    try:
+        bgg_id = int(form.get("bgg_id") or 0)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid BoardGameGeek id")
+    info = bgg.fetch(bgg_id) if bgg_id else None
+    name = (form.get("name") or "").strip()
+    if not bgg_id or not name:
+        raise HTTPException(status_code=400, detail="Missing game details")
+    key = f"bgg-{bgg_id}"
+    save_added_game(
+        key,
+        name,
+        bgg_id,
+        info.year if info else None,
+        list(info.designers) if info else [],
+        info.thumbnail if info else None,
+    )
+    return RedirectResponse(f"/games/{key}", status_code=303)
 
 
 @app.get("/games/{key}", response_class=HTMLResponse)
@@ -136,9 +191,10 @@ def game_page(request: Request, key: str, location: str | None = None):
     ]
     return templates.TemplateResponse(
         request,
-        "game.html",
+        game.template,
         {
             "game": game,
+            "bgg": game.bgg_info(),
             "summary": game.summary(counted) + stats.duration_summary(here),
             "tables": tables,
             "charts": chart_blocks,
@@ -201,6 +257,7 @@ def _match_to_values(match: dict) -> dict:
     """Flatten a loaded match back into the match form's field names, for editing."""
     values: dict = {
         "played_on": match["played_on"],
+        "played_at": match["played_at"] or "",
         "location": match["location"] or "",
         **match["details"],
     }
@@ -221,7 +278,7 @@ def _match_to_values(match: dict) -> dict:
     return values
 
 
-def _parse_match_form(game: Game, form) -> tuple[str, dict, list[dict], int | None, list[str]]:
+def _parse_match_form(game: Game, form) -> tuple[str, str | None, dict, list[dict], int | None, list[str]]:
     """Validate a submitted match form. Shared by create and edit."""
     errors: list[str] = []
     played_on = (form.get("played_on") or "").strip() or date.today().isoformat()
@@ -229,6 +286,7 @@ def _parse_match_form(game: Game, form) -> tuple[str, dict, list[dict], int | No
         date.fromisoformat(played_on)
     except ValueError:
         errors.append("Date is not valid.")
+    played_at = (form.get("played_at") or "").strip() or None
 
     details, participants, parse_errors = game.parse_form(form)
     errors += parse_errors
@@ -247,7 +305,7 @@ def _parse_match_form(game: Game, form) -> tuple[str, dict, list[dict], int | No
             errors.append(f"More than one player is called “{p['player']}”. Give them distinct nicknames.")
         else:
             p["player_id"] = ids[0]
-    return played_on, details, participants, duration, errors
+    return played_on, played_at, details, participants, duration, errors
 
 
 def _require_admin(request: Request) -> None:
@@ -283,7 +341,7 @@ async def create_match(request: Request, key: str):
     form = await request.form()
     values = {k: form.get(k) for k in form.keys()}
 
-    played_on, details, participants, duration, errors = _parse_match_form(game, form)
+    played_on, played_at, details, participants, duration, errors = _parse_match_form(game, form)
     if errors:
         return _render_form(request, game, values, errors, status=422)
 
@@ -293,6 +351,7 @@ async def create_match(request: Request, key: str):
         played_on,
         details,
         participants,
+        played_at=played_at,
         location_id=db.location_id_for(form.get("location") or ""),
         duration_seconds=duration,
     )
@@ -326,7 +385,7 @@ async def update_match_route(request: Request, key: str, match_id: int):
     form = await request.form()
     values = {k: form.get(k) for k in form.keys()}
 
-    played_on, details, participants, duration, errors = _parse_match_form(game, form)
+    played_on, played_at, details, participants, duration, errors = _parse_match_form(game, form)
     if errors:
         return _render_form(
             request,
@@ -345,6 +404,7 @@ async def update_match_route(request: Request, key: str, match_id: int):
         played_on,
         details,
         participants,
+        played_at=played_at,
         location_id=db.location_id_for(form.get("location") or ""),
         duration_seconds=duration,
     )
@@ -558,10 +618,11 @@ def delete_player_route(request: Request, player_id: int):
 
 def _player_summary(player_id: int, matches: list[dict]) -> tuple[list, list, list]:
     """Overall numbers, per-game rows, and this player's matches (newest first)."""
+    games = all_games()
     per_game: dict[str, list[int]] = {}
     history: list[dict] = []
     for m in matches:
-        game = GAMES.get(m["game"])
+        game = games.get(m["game"])
         mine = next((p for p in m["participants"] if p["player_id"] == player_id), None)
         if game is None or mine is None:
             continue
@@ -581,8 +642,8 @@ def _player_summary(player_id: int, matches: list[dict]) -> tuple[list, list, li
         ("Win rate", rate(total, wins)),
     ]
     game_rows = [
-        [GAMES[key].name, games, won, rate(games, won)]
-        for key, (games, won) in sorted(per_game.items(), key=lambda kv: -kv[1][0])
+        [games[key].name, count, won, rate(count, won)]
+        for key, (count, won) in sorted(per_game.items(), key=lambda kv: -kv[1][0])
     ]
     return summary, game_rows, history
 
@@ -700,3 +761,29 @@ def logout():
     response = RedirectResponse("/", status_code=303)
     response.delete_cookie(auth.COOKIE)
     return response
+
+
+# ---- admin: BoardGameGeek key ---------------------------------------------
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin(request: Request, saved: bool = False):
+    _require_admin(request)
+    if get_setting("bgg_api_token"):
+        token_source = "database"
+    elif os.environ.get("BGG_API_TOKEN"):
+        token_source = "environment"
+    else:
+        token_source = None
+    return templates.TemplateResponse(
+        request, "admin.html", {"token_source": token_source, "saved": saved}
+    )
+
+
+@app.post("/admin/bgg-token")
+async def set_bgg_token(request: Request):
+    _require_admin(request)
+    form = await request.form()
+    token = (form.get("token") or "").strip()
+    if token:
+        set_setting("bgg_api_token", token)
+    return RedirectResponse("/admin?saved=true", status_code=303)

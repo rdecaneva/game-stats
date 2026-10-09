@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}?v={{ asset_version }}">
 </head>
 <body>
+  {% block header %}
   <header class="topbar">
     <a href="/" class="brand">Game Stats</a>
     <nav class="nav">
@@ -19,6 +20,7 @@
       {% if request.state.player %}
       {% if request.state.player.is_admin %}
       <a href="/locations">Locations</a>
+      <a href="/admin">Admin</a>
       {% endif %}
       <a href="/players/{{ request.state.player.id }}/edit" class="avatar" title="My details">
         {{ (request.state.player.first_name[:1] ~ request.state.player.last_name[:1])|upper }}
@@ -31,6 +33,7 @@
       {% endif %}
     </nav>
   </header>
+  {% endblock %}
   <main class="container">
     {% block content %}{% endblock %}
   </main>

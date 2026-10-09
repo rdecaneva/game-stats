@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 from app import db
 from app.db import load_matches
-from app.games import GAMES
+from app.games import CODE_GAMES as GAMES
 from app.games.base import group_results
 from app.main import app
 
