@@ -1,8 +1,9 @@
 """Look up game details on BoardGameGeek (XML API2).
 
-The API needs a bearer token, read from the BGG_API_TOKEN environment variable.
-Without one, or if the request fails, lookups return None and pages fall back
-to showing just the game name.
+The API needs a bearer token. It's read from the BGG_API_TOKEN environment
+variable, unless an admin has set one via /admin, which takes priority so the
+key can be rotated without redeploying. Without one, or if the request fails,
+lookups return None and pages fall back to showing just the game name.
 """
 
 import os
@@ -12,6 +13,8 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from functools import lru_cache
+
+from . import db
 
 API_URL = "https://boardgamegeek.com/xmlapi2/thing?id={id}"
 
@@ -26,13 +29,17 @@ class BggInfo:
 SEARCH_URL = "https://boardgamegeek.com/xmlapi2/search?type=boardgame&query={query}"
 
 
+def current_token() -> str | None:
+    return db.get_setting("bgg_api_token") or os.environ.get("BGG_API_TOKEN")
+
+
 def configured() -> bool:
-    return bool(os.environ.get("BGG_API_TOKEN"))
+    return bool(current_token())
 
 
 def _get(url: str) -> ET.Element | None:
     """GET an XML API2 URL with the token. Returns None when unconfigured or on failure."""
-    token = os.environ.get("BGG_API_TOKEN")
+    token = current_token()
     if not token:
         return None
     request = urllib.request.Request(

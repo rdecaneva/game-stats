@@ -24,6 +24,10 @@
     <span class="field-label">Date</span>
     <input type="date" name="played_on" value="{{ values.get('played_on') or today }}">
   </label>
+  <label class="field">
+    <span class="field-label">Time</span>
+    <input type="time" name="played_at" value="{{ values.get('played_at') or '' }}">
+  </label>
 
   {% for f in game.match_fields %}
     {{ input(f, values.get(f.name)) }}
@@ -50,7 +54,7 @@
       {{ input(f, values.get('player_%d_%s' % (i, f.name)), listid=f.name ~ '-list') }}
     {% endfor %}
     <label class="winner-pick">
-      <input type="radio" name="winner" value="{{ i }}" {% if values.get('winner') == i|string %}checked{% endif %}>
+      <input type="checkbox" name="winner" value="{{ i }}" {% if i|string in values.get('winner', []) %}checked{% endif %}>
       <span>Winner</span>
     </label>
   </fieldset>

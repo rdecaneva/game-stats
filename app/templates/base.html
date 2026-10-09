@@ -15,15 +15,7 @@
     <a href="/" class="brand">Game Stats</a>
     <nav class="nav">
       <a href="/games">Games</a>
-      <a href="/players">Players</a>
-      {% if request.state.player %}
-      <a href="/players/{{ request.state.player.id }}/edit">My details</a>
-      <form method="post" action="/logout" class="inline-form">
-        <button class="link-btn" type="submit">Log out</button>
-      </form>
-      {% else %}
-      <a href="/login">Log in</a>
-      {% endif %}
+      <a href="/admin">Admin</a>
     </nav>
   </header>
   {% endblock %}

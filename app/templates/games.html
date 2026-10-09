@@ -2,11 +2,11 @@
 {% block title %}Games · Game Stats{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>Games</h1>
+  <h1>Recent Games</h1>
 </div>
 
 <form method="get" action="/games" class="search card" id="game-search">
-  <input type="search" name="q" value="{{ q }}" placeholder="Search games" aria-label="Search games"
+  <input type="search" name="q" value="{{ q }}" placeholder="Search or add a game" aria-label="Search or add a game"
          autocomplete="off" autofocus>
   <button type="submit" class="btn btn-primary">Search</button>
 </form>
@@ -50,6 +50,14 @@
   {% endif %}
 {% endif %}
 </div>
+
+<h2>Recent Matches</h2>
+{% if recent %}
+  {% set show_game = true %}
+  {% include "_match_list.html" %}
+{% else %}
+  <p class="muted">No matches recorded yet. Pick a game above to log your first one.</p>
+{% endif %}
 
 <script>
   // Search as you type: refresh the results area from the same /games URL.

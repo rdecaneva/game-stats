@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
@@ -8,7 +9,16 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import bgg
-from .db import delete_match, init_db, insert_match, load_matches, save_added_game
+from .db import (
+    delete_match,
+    get_setting,
+    init_db,
+    insert_match,
+    load_matches,
+    recently_played_games,
+    save_added_game,
+    set_setting,
+)
 from .games import all_games, get_game
 from .games.base import Game
 
@@ -41,6 +51,7 @@ def _describe(game: Game, match: dict) -> dict:
         "game_key": game.key,
         "game_name": game.name,
         "played_on": match["played_on"],
+        "played_at": match["played_at"],
         "players": ", ".join(p["player"] for p in match["participants"]),
         "winner": ", ".join(winners) if winners else None,
         "details": match["details"],
@@ -64,9 +75,18 @@ def home(request: Request):
 def games_index(request: Request, q: str = ""):
     q = q.strip()
     games = all_games()
-    matches = [g for g in games.values() if q.lower() in g.name.lower()] if q else list(games.values())
+    if q:
+        matches = [g for g in games.values() if q.lower() in g.name.lower()]
+    else:
+        recent_keys = recently_played_games(limit=10)
+        matches = [games[key] for key in recent_keys if key in games]
+        if not matches:
+            matches = list(games.values())
     # Only search BoardGameGeek when the query has no local match, to avoid needless lookups.
     found = bgg.search(q) if q and not matches else []
+    recent = [
+        _describe(games[m["game"]], m) for m in load_matches(limit=10) if m["game"] in games
+    ]
     return templates.TemplateResponse(
         request,
         "games.html",
@@ -76,6 +96,7 @@ def games_index(request: Request, q: str = ""):
             "found": found,
             "bgg_configured": bgg.configured(),
             "already_added": {g.bgg_id for g in games.values() if g.bgg_id},
+            "recent": recent,
         },
     )
 
@@ -146,6 +167,7 @@ async def create_match(request: Request, key: str):
     game = _get_game(key)
     form = await request.form()
     values = {k: form.get(k) for k in form.keys()}
+    values["winner"] = form.getlist("winner")
 
     errors: list[str] = []
     played_on = (form.get("played_on") or "").strip() or date.today().isoformat()
@@ -153,13 +175,14 @@ async def create_match(request: Request, key: str):
         date.fromisoformat(played_on)
     except ValueError:
         errors.append("Date is not valid.")
+    played_at = (form.get("played_at") or "").strip() or None
 
     details, participants, parse_errors = game.parse_form(form)
     errors += parse_errors
     if errors:
         return _render_form(request, game, values, errors, status=422)
 
-    insert_match(game.key, played_on, details, participants)
+    insert_match(game.key, played_on, played_at, details, participants)
     return RedirectResponse(f"/games/{game.key}", status_code=303)
 
 
@@ -168,3 +191,25 @@ def delete_match_route(key: str, match_id: int):
     _get_game(key)
     delete_match(key, match_id)
     return RedirectResponse(f"/games/{key}", status_code=303)
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin(request: Request, saved: bool = False):
+    if get_setting("bgg_api_token"):
+        token_source = "database"
+    elif os.environ.get("BGG_API_TOKEN"):
+        token_source = "environment"
+    else:
+        token_source = None
+    return templates.TemplateResponse(
+        request, "admin.html", {"token_source": token_source, "saved": saved}
+    )
+
+
+@app.post("/admin/bgg-token")
+async def set_bgg_token(request: Request):
+    form = await request.form()
+    token = (form.get("token") or "").strip()
+    if token:
+        set_setting("bgg_api_token", token)
+    return RedirectResponse("/admin?saved=true", status_code=303)

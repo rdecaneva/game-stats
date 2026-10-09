@@ -56,7 +56,7 @@
   {% for m in matches %}
   <li class="match">
     <div class="match-main">
-      <span class="match-date">{{ m.played_on }}</span>
+      <span class="match-date">{{ m.played_on }}{% if m.played_at %} {{ m.played_at }}{% endif %}</span>
       {% if m.details.format %}<span class="tag">{{ m.details.format }}</span>{% endif %}
       {% if m.details.turns %}<span class="tag">{{ m.details.turns }} turns</span>{% endif %}
     </div>

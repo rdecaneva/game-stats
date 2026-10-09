@@ -76,7 +76,7 @@ class Game:
             if value is not None:
                 details[f.name] = value
 
-        winner = form.get("winner", "")
+        winners = set(form.getlist("winner"))
         participants: list[dict] = []
         for i in range(self.max_players):
             name = (form.get(f"player_{i}_name") or "").strip()
@@ -88,7 +88,7 @@ class Game:
                 if value is not None:
                     player_details[f.name] = value
             participants.append(
-                {"player": name, "won": str(i) == winner, "details": player_details}
+                {"player": name, "won": str(i) in winners, "details": player_details}
             )
 
         if len(participants) < 2:
