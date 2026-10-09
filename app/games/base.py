@@ -67,7 +67,7 @@ class Game:
             if value is not None:
                 details[f.name] = value
 
-        winner = form.get("winner", "")
+        score_field = Field("score", "Score", "number")
         participants: list[dict] = []
         for i in range(self.max_players):
             name = (form.get(f"player_{i}_name") or "").strip()
@@ -78,8 +78,21 @@ class Game:
                 value = _read(form.get(f"player_{i}_{f.name}"), f, errors, prefix=f"{name}: ")
                 if value is not None:
                     player_details[f.name] = value
+            score = _read(form.get(f"player_{i}_score"), score_field, errors, prefix=f"{name}: ")
+            is_player = form.get(f"player_{i}_nonplayer") != "1"
+            won = form.get(f"player_{i}_winner") == "1"
+            if won and not is_player:
+                errors.append(f"{name} is not competing, so they can't be the winner.")
             participants.append(
-                {"player": name, "won": str(i) == winner, "details": player_details}
+                {
+                    "player": name,
+                    "label": name,
+                    "guest": form.get(f"player_{i}_guest") == "1",
+                    "is_player": is_player,
+                    "won": won,
+                    "score": score,
+                    "details": player_details,
+                }
             )
 
         if len(participants) < 2:

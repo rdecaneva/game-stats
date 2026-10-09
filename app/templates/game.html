@@ -6,6 +6,15 @@
   <a class="btn btn-primary" href="/games/{{ game.key }}/new">+ New match</a>
 </div>
 
+{% if locations %}
+<nav class="filters" aria-label="Filter by location">
+  <a class="chip{% if not location_id %} chip-on{% endif %}" href="?">All locations</a>
+  {% for loc in locations %}
+  <a class="chip{% if location_id == loc.id %} chip-on{% endif %}" href="?location={{ loc.id }}">{{ loc.name }}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+
 <section class="summary">
   {% for label, value in summary %}
   <div class="stat">
@@ -14,6 +23,13 @@
   </div>
   {% endfor %}
 </section>
+
+{% for c in charts %}
+<section class="card">
+  <h2>{{ c.title }}</h2>
+  {{ c.svg|safe }}
+</section>
+{% endfor %}
 
 {% for table in tables %}
 <section class="card">
@@ -41,17 +57,22 @@
   {% for m in matches %}
   <li class="match">
     <div class="match-main">
-      <span class="match-date">{{ m.played_on }}</span>
+      <a class="match-date" href="/games/{{ game.key }}/matches/{{ m.id }}">{{ m.played_on }}</a>
       {% if m.details.format %}<span class="tag">{{ m.details.format }}</span>{% endif %}
       {% if m.details.turns %}<span class="tag">{{ m.details.turns }} turns</span>{% endif %}
+      {% if m.location %}<span class="tag">{{ m.location }}</span>{% endif %}
+      {% if m.duration %}<span class="tag">{{ m.duration }}</span>{% endif %}
     </div>
     <div class="match-players">{{ m.players }}</div>
     <div class="muted">{% if m.winner %}Winner: <strong>{{ m.winner }}</strong>{% else %}No winner recorded{% endif %}</div>
     {% if m.details.notes %}<p class="notes">{{ m.details.notes }}</p>{% endif %}
+    {% if request.state.player and request.state.player.is_admin %}
+    <a class="btn btn-small" href="/games/{{ game.key }}/matches/{{ m.id }}/edit">Edit</a>
     <form method="post" action="/games/{{ game.key }}/matches/{{ m.id }}/delete"
-          onsubmit="return confirm('Delete this match?');" class="inline-form">
+          data-confirm="Delete this match?" class="inline-form">
       <button type="submit" class="btn btn-danger btn-small">Delete</button>
     </form>
+    {% endif %}
   </li>
   {% endfor %}
 </ul>

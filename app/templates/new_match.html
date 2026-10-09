@@ -1,10 +1,13 @@
 {% extends "base.html" %}
-{% from "_fields.html" import input %}
-{% block title %}New match · {{ game.name }}{% endblock %}
+{% from "_fields.html" import input, cell_input %}
+{% block title %}{{ heading or 'New match' }} · {{ game.name }}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>New {{ game.name }} match</h1>
-  <a class="muted" href="/games/{{ game.key }}">Cancel</a>
+  <div>
+    <h1>{{ heading or 'New Log Entry' }}</h1>
+    <p class="muted small">{{ game.name }}</p>
+  </div>
+  <a class="muted" href="{{ cancel_url or '/games/' ~ game.key }}">Cancel</a>
 </div>
 
 {% if errors %}
@@ -13,7 +16,7 @@
 </div>
 {% endif %}
 
-<form method="post" action="/games/{{ game.key }}/new" class="card form">
+<form method="post" action="{{ action or '/games/' ~ game.key ~ '/new' }}" class="card form">
   <label class="field">
     <span class="field-label">Date</span>
     <input type="date" name="played_on" value="{{ values.get('played_on') or today }}">
@@ -23,27 +26,88 @@
     {{ input(f, values.get(f.name)) }}
   {% endfor %}
 
+  <label class="field">
+    <span class="field-label">Location</span>
+    <input type="text" name="location" value="{{ values.get('location') or '' }}"
+           list="locations" autocomplete="off">
+  </label>
+
+  <label class="field">
+    <span class="field-label">Length (minutes)</span>
+    <input type="number" name="duration_minutes" inputmode="decimal" min="0" step="any"
+           value="{{ values.get('duration_minutes') or '' }}">
+  </label>
+
   <h2>Players</h2>
-  <p class="muted small">Fill in at least two. Tap the circle next to the winner (optional).</p>
+  <p class="muted small">Fill in at least two, using “Add player” for more. Tick the box next to the winner (optional). Use “More” for guests or non-competing entries.</p>
 
-  {% for i in range(game.max_players) %}
-  <fieldset class="player-row">
-    <legend>Player {{ i + 1 }}</legend>
-    <label class="field">
-      <span class="field-label">Name</span>
-      <input type="text" name="player_{{ i }}_name" value="{{ values.get('player_%d_name' % i) or '' }}"
-             list="names" autocomplete="off">
-    </label>
-    {% for f in game.player_fields %}
-      {{ input(f, values.get('player_%d_%s' % (i, f.name)), listid=f.name ~ '-list') }}
-    {% endfor %}
-    <label class="winner-pick">
-      <input type="radio" name="winner" value="{{ i }}" {% if values.get('winner') == i|string %}checked{% endif %}>
-      <span>Winner</span>
-    </label>
-  </fieldset>
-  {% endfor %}
+  <div class="table-wrap">
+    <table class="player-table">
+      <thead>
+        <tr>
+          <th>Player</th>
+          {% for f in game.player_fields %}<th>{{ f.label }}</th>{% endfor %}
+          <th>Score</th>
+          <th class="winner-cell">Winner</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set ns = namespace(more_rows=false) %}
+        {% for i in range(game.max_players) %}
+        {% set row_ns = namespace(field_filled=false) %}
+        {% for f in game.player_fields %}
+          {% if values.get('player_%d_%s' % (i, f.name)) %}{% set row_ns.field_filled = true %}{% endif %}
+        {% endfor %}
+        {% set has_data = values.get('player_%d_name' % i) or values.get('player_%d_score' % i)
+                           or values.get('player_%d_winner' % i) or values.get('player_%d_guest' % i)
+                           or values.get('player_%d_nonplayer' % i) or row_ns.field_filled %}
+        {% set row_hidden = i > 0 and not has_data %}
+        {% set extra_open = values.get('player_%d_guest' % i) or values.get('player_%d_nonplayer' % i) %}
+        {% if row_hidden %}{% set ns.more_rows = true %}{% endif %}
+        <tr class="player-row" {% if row_hidden %}hidden{% endif %}>
+          <td>
+            <input type="text" name="player_{{ i }}_name" value="{{ values.get('player_%d_name' % i) or '' }}"
+                   list="names" autocomplete="off" placeholder="Player {{ i + 1 }}">
+          </td>
+          {% for f in game.player_fields %}
+          <td>{{ cell_input(f, values.get('player_%d_%s' % (i, f.name)), listid=f.name ~ '-list', name='player_%d_%s' % (i, f.name)) }}</td>
+          {% endfor %}
+          <td>
+            <input type="number" name="player_{{ i }}_score" inputmode="numeric" step="1"
+                   value="{{ values.get('player_%d_score' % i) or '' }}">
+          </td>
+          <td class="winner-cell">
+            <input type="checkbox" name="player_{{ i }}_winner" value="1" {% if values.get('player_%d_winner' % i) %}checked{% endif %}>
+          </td>
+          <td>
+            <button type="button" class="btn btn-small row-more"
+                    onclick="this.closest('tr').nextElementSibling.hidden = !this.closest('tr').nextElementSibling.hidden">More</button>
+          </td>
+        </tr>
+        <tr class="player-extra" {% if row_hidden or not extra_open %}hidden{% endif %}>
+          <td colspan="{{ game.player_fields|length + 4 }}">
+            <label class="check">
+              <input type="checkbox" name="player_{{ i }}_guest" value="1" {% if values.get('player_%d_guest' % i) %}checked{% endif %}>
+              <span>Guest (no player profile)</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" name="player_{{ i }}_nonplayer" value="1" {% if values.get('player_%d_nonplayer' % i) %}checked{% endif %}>
+              <span>Not competing (automa, bot, explainer)</span>
+            </label>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if ns.more_rows %}
+  <button type="button" class="btn add-player" id="add-player">+ Add player</button>
+  {% endif %}
 
+  <datalist id="locations">
+    {% for name in suggestions.get('location', []) %}<option value="{{ name }}">{% endfor %}
+  </datalist>
   <datalist id="names">
     {% for name in suggestions.get('player', []) %}<option value="{{ name }}">{% endfor %}
   </datalist>
@@ -55,4 +119,15 @@
 
   <button type="submit" class="btn btn-primary btn-block">Save match</button>
 </form>
+
+{% if ns.more_rows %}
+<script>
+document.getElementById("add-player").addEventListener("click", function () {
+  var row = document.querySelector("table.player-table tr.player-row[hidden]");
+  if (!row) return;
+  row.hidden = false;
+  if (!document.querySelector("table.player-table tr.player-row[hidden]")) this.hidden = true;
+});
+</script>
+{% endif %}
 {% endblock %}

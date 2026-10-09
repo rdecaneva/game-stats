@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Log in · Game Stats{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Log in</h1>
+</div>
+
+{% if errors %}
+<div class="alert" role="alert">
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="/login" class="card form">
+  <label class="field">
+    <span class="field-label">Email</span>
+    <input type="email" name="email" value="{{ email }}" autocomplete="username" required>
+  </label>
+  <label class="field">
+    <span class="field-label">Password</span>
+    <input type="password" name="password" autocomplete="current-password" required>
+  </label>
+  <button type="submit" class="btn btn-primary btn-block">Log in</button>
+</form>
+{% endblock %}

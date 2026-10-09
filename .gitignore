@@ -3,3 +3,8 @@ __pycache__/
 .venv/
 .pytest_cache/
 data/
+*.db
+*.sqlite
+*.sqlite3
+.env
+.claude/

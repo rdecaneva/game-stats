@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Set password · Game Stats{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Create login for {{ player.display }}</h1>
+</div>
+
+{% if errors %}
+<div class="alert" role="alert">
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="/confirm/{{ token }}" class="card form">
+  <label class="field">
+    <span class="field-label">Password <span class="req">*</span></span>
+    <input type="password" name="password" minlength="8" autocomplete="new-password" required>
+    <span class="muted small">At least 8 characters.</span>
+  </label>
+  <label class="field">
+    <span class="field-label">Confirm password <span class="req">*</span></span>
+    <input type="password" name="confirm" minlength="8" autocomplete="new-password" required>
+  </label>
+  <button type="submit" class="btn btn-primary btn-block">Create login</button>
+</form>
+{% endblock %}

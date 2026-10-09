@@ -1,21 +1,26 @@
-{% macro input(f, value, listid=None) -%}
-<label class="field">
-  <span class="field-label">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</span>
+{% macro cell_input(f, value, listid=None, name=None) -%}
+  {% set name = name or f.name %}
   {%- if f.kind == "select" %}
-  <select name="{{ f.name }}" {% if f.required %}required{% endif %}>
+  <select name="{{ name }}" {% if f.required %}required{% endif %}>
     {% if not f.required %}<option value="">—</option>{% endif %}
     {% for opt in f.options %}
     <option value="{{ opt }}" {% if value == opt %}selected{% endif %}>{{ opt }}</option>
     {% endfor %}
   </select>
   {%- elif f.kind == "textarea" %}
-  <textarea name="{{ f.name }}" rows="2">{{ value or '' }}</textarea>
+  <textarea name="{{ name }}" rows="2">{{ value or '' }}</textarea>
   {%- else %}
   <input type="{{ 'number' if f.kind == 'number' else 'text' }}"
          {% if f.kind == 'number' %}inputmode="numeric" min="0"{% endif %}
-         name="{{ f.name }}" value="{{ value or '' }}"
+         name="{{ name }}" value="{{ value or '' }}"
          {% if listid %}list="{{ listid }}"{% endif %}
          autocomplete="off" {% if f.required %}required{% endif %}>
   {%- endif %}
+{%- endmacro %}
+
+{% macro input(f, value, listid=None, name=None) -%}
+<label class="field">
+  <span class="field-label">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</span>
+  {{ cell_input(f, value, listid, name) }}
 </label>
 {%- endmacro %}

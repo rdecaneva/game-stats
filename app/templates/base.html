@@ -4,14 +4,82 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Game Stats{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}?v={{ asset_version }}">
 </head>
 <body>
   <header class="topbar">
     <a href="/" class="brand">Game Stats</a>
+    <nav class="nav">
+      <a href="/">Main menu</a>
+      <a href="/games">Games</a>
+      <a href="/players">Players</a>
+      {% if request.state.player %}
+      {% if request.state.player.is_admin %}
+      <a href="/locations">Locations</a>
+      {% endif %}
+      <a href="/players/{{ request.state.player.id }}/edit" class="avatar" title="My details">
+        {{ (request.state.player.first_name[:1] ~ request.state.player.last_name[:1])|upper }}
+      </a>
+      <form method="post" action="/logout" class="inline-form">
+        <button class="link-btn" type="submit">Log out</button>
+      </form>
+      {% else %}
+      <a href="/login">Log in</a>
+      {% endif %}
+    </nav>
   </header>
   <main class="container">
     {% block content %}{% endblock %}
   </main>
+
+  <div id="confirm-modal" class="modal-overlay" hidden>
+    <div class="modal card">
+      <p id="confirm-message"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="confirm-cancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirm-ok">Delete</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var modal = document.getElementById('confirm-modal');
+      var message = document.getElementById('confirm-message');
+      var okBtn = document.getElementById('confirm-ok');
+      var cancelBtn = document.getElementById('confirm-cancel');
+      var pendingForm = null;
+
+      function close() {
+        modal.hidden = true;
+        pendingForm = null;
+      }
+
+      document.addEventListener('submit', function (e) {
+        var form = e.target.closest('form[data-confirm]');
+        if (form) {
+          e.preventDefault();
+          pendingForm = form;
+          message.textContent = form.getAttribute('data-confirm');
+          modal.hidden = false;
+        }
+      });
+
+      okBtn.addEventListener('click', function () {
+        var form = pendingForm;
+        close();
+        if (form) form.submit();
+      });
+      cancelBtn.addEventListener('click', close);
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) close();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.hidden) close();
+      });
+    })();
+  </script>
 </body>
 </html>

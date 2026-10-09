@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Main menu · Game Stats{% endblock %}
+{% block content %}
+<h1>Main menu</h1>
+
+<div class="grid menu-list">
+  <a class="card link-card" href="/games">
+    <span class="card-title">Games</span>
+    <span class="muted">Find a game and log a match →</span>
+  </a>
+  <a class="card link-card" href="/players">
+    <span class="card-title">Players</span>
+    <span class="muted">Browse players and stats →</span>
+  </a>
+  {% if request.state.player and request.state.player.is_admin %}
+  <a class="card link-card" href="/locations">
+    <span class="card-title">Locations</span>
+    <span class="muted">Manage where games are played →</span>
+  </a>
+  {% endif %}
+  {% if request.state.player %}
+  <a class="card link-card" href="/players/{{ request.state.player.id }}/edit">
+    <span class="card-title">My details</span>
+    <span class="muted">Edit your profile →</span>
+  </a>
+  {% endif %}
+</div>
+{% endblock %}

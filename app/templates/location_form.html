@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Game Stats{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <a class="muted" href="/locations">Cancel</a>
+</div>
+
+{% if errors %}
+<div class="alert" role="alert">
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="{{ action }}" class="card form">
+  <label class="field">
+    <span class="field-label">Name <span class="req">*</span></span>
+    <input type="text" name="name" value="{{ values.get('name') or '' }}" required>
+  </label>
+  <label class="field">
+    <span class="field-label">Type</span>
+    <select name="type">
+      <option value="">—</option>
+      {% for t in types %}
+      <option value="{{ t }}" {% if values.get('type') == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="field">
+    <span class="field-label">Street</span>
+    <input type="text" name="street" value="{{ values.get('street') or '' }}">
+  </label>
+  <label class="field">
+    <span class="field-label">City</span>
+    <input type="text" name="city" value="{{ values.get('city') or '' }}">
+  </label>
+  <label class="field">
+    <span class="field-label">State / region</span>
+    <input type="text" name="region" value="{{ values.get('region') or '' }}">
+  </label>
+  <label class="field">
+    <span class="field-label">Postal code</span>
+    <input type="text" name="postal_code" value="{{ values.get('postal_code') or '' }}">
+  </label>
+  <button type="submit" class="btn btn-primary btn-block">Save location</button>
+</form>
+
+{% if map_url %}
+<section class="card">
+  <h2>Map preview</h2>
+  <iframe class="map-preview" src="{{ map_url }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+</section>
+{% endif %}
+{% endblock %}

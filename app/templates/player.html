@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}{{ player.display }} · Game Stats{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ player.display }}{% if player.is_admin %} <span class="tag">admin</span>{% endif %}</h1>
+  <div class="actions">
+    {% if can_edit %}<a class="btn" href="/players/{{ player.id }}/edit">Edit</a>{% endif %}
+    {% if not player.has_login %}
+    <form method="post" action="/players/{{ player.id }}/login-link" class="inline-form">
+      <button class="btn btn-primary" type="submit">Create login</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if locations %}
+<nav class="filters" aria-label="Filter by location">
+  <a class="chip{% if not location_id %} chip-on{% endif %}" href="?">All locations</a>
+  {% for loc in locations %}
+  <a class="chip{% if location_id == loc.id %} chip-on{% endif %}" href="?location={{ loc.id }}">{{ loc.name }}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+<section class="summary">
+  {% for label, value in summary %}
+  <div class="stat">
+    <span class="stat-value">{{ value }}</span>
+    <span class="stat-label">{{ label }}</span>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Contact</h2>
+  <dl class="details">
+    <dt>Email</dt>
+    <dd>{% if contact.email is none %}<span class="masked">hidden</span>{% else %}{{ contact.email }}{% endif %}</dd>
+    <dt>Phone</dt>
+    <dd>{% if contact.phone is none %}<span class="masked">hidden</span>{% elif contact.phone %}{{ contact.phone }}{% else %}—{% endif %}</dd>
+    {% if notes is not none %}
+    <dt>Notes</dt>
+    <dd>{{ notes or '—' }}</dd>
+    {% endif %}
+  </dl>
+</section>
+
+<section class="card">
+  <h2>By game</h2>
+  {% if game_rows %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Game</th><th>Games</th><th>Wins</th><th>Win rate</th></tr></thead>
+      <tbody>
+        {% for row in game_rows %}
+        <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">No matches yet.</p>
+  {% endif %}
+</section>
+
+<h2>Match history</h2>
+{% if history %}
+<ul class="match-list">
+  {% for m in history %}
+  <li class="match">
+    <div class="match-main">
+      <a class="match-date" href="/games/{{ m.game_key }}/matches/{{ m.id }}">{{ m.played_on }}</a>
+      <span class="tag">{{ m.game_name }}</span>
+      {% if m.location %}<span class="tag">{{ m.location }}</span>{% endif %}
+      {% if m.details.format %}<span class="tag">{{ m.details.format }}</span>{% endif %}
+    </div>
+    <div class="match-players">{{ m.players }}</div>
+    <div class="muted">{% if m.winner %}Winner: <strong>{{ m.winner }}</strong>{% else %}No winner recorded{% endif %}</div>
+    {% if request.state.player and request.state.player.is_admin %}
+    <a class="btn btn-small" href="/games/{{ m.game_key }}/matches/{{ m.id }}/edit">Edit</a>
+    <form method="post" action="/games/{{ m.game_key }}/matches/{{ m.id }}/delete"
+          data-confirm="Delete this match?" class="inline-form">
+      <button type="submit" class="btn btn-danger btn-small">Delete</button>
+    </form>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No matches yet.</p>
+{% endif %}
+{% endblock %}

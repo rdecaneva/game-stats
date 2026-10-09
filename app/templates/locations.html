@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Locations · Game Stats{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Locations</h1>
+  <a class="btn btn-primary" href="/locations/new">+ New location</a>
+</div>
+
+{% if locations %}
+<ul class="match-list">
+  {% for loc in locations %}
+  <li class="match">
+    <a href="/locations/{{ loc.id }}/edit"><strong>{{ loc.name }}</strong></a>
+    {% if loc.type %}<span class="tag">{{ loc.type }}</span>{% endif %}
+    {% if loc.city %}<span class="muted small">{{ loc.city }}</span>{% endif %}
+    <form method="post" action="/locations/{{ loc.id }}/delete"
+          data-confirm="Delete “{{ loc.name }}”? Matches there keep their history, just without a location."
+          class="inline-form">
+      <button class="btn btn-danger btn-small" type="submit">Delete</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No locations yet. They're added automatically the first time you log a match with one, or add one directly above.</p>
+{% endif %}
+{% endblock %}

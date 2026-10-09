@@ -11,3 +11,7 @@ Default five-role vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `
 ### Domain docs
 
 Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Dev server
+
+Always relaunch the site after changing app code, before calling a task done. See `docs/agents/dev-server.md`.

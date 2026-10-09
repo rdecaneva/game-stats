@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Players · Game Stats{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Players</h1>
+  <a class="btn btn-primary" href="/players/new">+ New player</a>
+</div>
+
+<form method="get" action="/players" class="card search">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search by name">
+  <button class="btn" type="submit">Search</button>
+</form>
+
+{% if players %}
+<ul class="match-list">
+  {% for p in players %}
+  <li class="match">
+    <a href="/players/{{ p.id }}"><strong>{{ p.display }}</strong></a>
+    {% if not p.has_login %}<span class="tag">no login</span>{% endif %}
+    {% if p.is_admin %}<span class="tag">admin</span>{% endif %}
+    {% if request.state.player and request.state.player.is_admin %}
+    {% set is_last_admin = p.is_admin and admin_count <= 1 %}
+    <form method="post" action="/players/{{ p.id }}/admin" class="inline-form">
+      <input type="hidden" name="next" value="/players">
+      {% if p.is_admin %}
+      <button class="btn btn-small" type="submit" name="make_admin" value="0" {% if is_last_admin %}disabled title="There must always be at least one admin"{% endif %}>Remove admin</button>
+      {% else %}
+      <button class="btn btn-small" type="submit" name="make_admin" value="1">Make admin</button>
+      {% endif %}
+    </form>
+    <form method="post" action="/players/{{ p.id }}/delete"
+          data-confirm="Delete {{ p.display }}? Their past matches are kept, but as unlinked guest entries."
+          class="inline-form">
+      <button class="btn btn-danger btn-small" type="submit" {% if is_last_admin %}disabled title="There must always be at least one admin"{% endif %}>Delete</button>
+    </form>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No players found.</p>
+{% endif %}
+{% endblock %}

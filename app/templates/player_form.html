@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Game Stats{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <a class="muted" href="/players">Cancel</a>
+</div>
+
+{% if errors %}
+<div class="alert" role="alert">
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{% if request.state.player and request.state.player.is_admin and values.get('id') %}
+{% set is_last_admin = values.get('is_admin') and admin_count <= 1 %}
+<form method="post" action="/players/{{ values.id }}/admin" class="card admin-box">
+  <input type="hidden" name="next" value="/players/{{ values.id }}/edit">
+  {% if values.get('is_admin') %}
+  <span class="muted">This player is an admin.</span>
+  <button class="btn btn-small" type="submit" name="make_admin" value="0" {% if is_last_admin %}disabled title="There must always be at least one admin"{% endif %}>Remove admin</button>
+  {% else %}
+  <span class="muted">This player is not an admin.</span>
+  <button class="btn btn-small" type="submit" name="make_admin" value="1">Make admin</button>
+  {% endif %}
+</form>
+<form method="post" action="/players/{{ values.id }}/delete"
+      data-confirm="Delete {{ values.display or (values.first_name ~ ' ' ~ values.last_name) }}? Their past matches are kept, but as unlinked guest entries."
+      class="card admin-box">
+  <span class="muted">Deleting removes their player profile and login.</span>
+  <button class="btn btn-danger btn-small" type="submit" {% if is_last_admin %}disabled title="There must always be at least one admin"{% endif %}>Delete player</button>
+</form>
+{% endif %}
+
+<form method="post" action="{{ action }}" class="card form">
+  <label class="field">
+    <span class="field-label">First name <span class="req">*</span></span>
+    <input type="text" name="first_name" value="{{ values.get('first_name') or '' }}" required>
+  </label>
+  <label class="field">
+    <span class="field-label">Last name <span class="req">*</span></span>
+    <input type="text" name="last_name" value="{{ values.get('last_name') or '' }}" required>
+  </label>
+  <label class="field">
+    <span class="field-label">Nickname</span>
+    <input type="text" name="nickname" value="{{ values.get('nickname') or '' }}">
+    <span class="muted small">Optional. Shown in brackets, e.g. Ryan de'Caneva (Rye).</span>
+  </label>
+  <label class="field">
+    <span class="field-label">Email <span class="req">*</span></span>
+    <input type="email" name="email" value="{{ values.get('email') or '' }}" required>
+  </label>
+  <label class="field">
+    <span class="field-label">Phone</span>
+    <input type="tel" name="phone" value="{{ values.get('phone') or '' }}">
+  </label>
+  <label class="field">
+    <span class="field-label">Notes</span>
+    <textarea name="notes" rows="3">{{ values.get('notes') or '' }}</textarea>
+  </label>
+  <label class="checkbox">
+    <input type="checkbox" name="show_email" {% if values.get('show_email') %}checked{% endif %}>
+    <span>Show email on player page</span>
+  </label>
+  <label class="checkbox">
+    <input type="checkbox" name="show_phone" {% if values.get('show_phone') %}checked{% endif %}>
+    <span>Show phone on player page</span>
+  </label>
+  <button type="submit" class="btn btn-primary btn-block">Save player</button>
+</form>
+{% endblock %}
