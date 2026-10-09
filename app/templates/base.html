@@ -4,12 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Game Stats{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
 </head>
 <body>
+  {% block header %}
   <header class="topbar">
     <a href="/" class="brand">Game Stats</a>
+    <nav class="nav">
+      <a href="/games">Games</a>
+      <a href="/admin">Admin</a>
+    </nav>
   </header>
+  {% endblock %}
   <main class="container">
     {% block content %}{% endblock %}
   </main>

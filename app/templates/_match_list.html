@@ -2,7 +2,7 @@
   {% for m in recent %}
   <li class="match">
     <div class="match-main">
-      <span class="match-date">{{ m.played_on }}</span>
+      <span class="match-date">{{ m.played_on }}{% if m.played_at %} {{ m.played_at }}{% endif %}</span>
       {% if m.game_name is defined and show_game %}<span class="tag">{{ m.game_name }}</span>{% endif %}
       {% if m.details.format %}<span class="tag">{{ m.details.format }}</span>{% endif %}
     </div>

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Admin · Game Stats{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Admin</h1>
+</div>
+
+<div class="card">
+  <h2>BoardGameGeek API key</h2>
+  <p class="muted">
+    Used to search and look up games on BoardGameGeek.
+    {% if token_source == "database" %}Currently set from here.
+    {% elif token_source == "environment" %}Currently set from the server's environment.
+    {% else %}Not set — game search and lookups are disabled.{% endif %}
+  </p>
+  {% if saved %}<p class="success">Saved.</p>{% endif %}
+  <form method="post" action="/admin/bgg-token">
+    <label class="field">
+      <span class="field-label">API key</span>
+      <input type="password" name="token" placeholder="{% if token_source %}Leave blank to keep the current key{% else %}Not set{% endif %}"
+             autocomplete="off" data-1p-ignore data-lpignore="true">
+    </label>
+    <button type="submit" class="btn btn-primary">Save</button>
+  </form>
+</div>
+{% endblock %}

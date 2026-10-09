@@ -2,9 +2,24 @@
 {% block title %}{{ game.name }} · Game Stats{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>{{ game.name }}</h1>
+  <div class="game-head">
+    {% if bgg and bgg.thumbnail %}
+    <img class="game-thumb" src="{{ bgg.thumbnail }}" alt="{{ game.name }} cover" loading="lazy">
+    {% else %}
+    <div class="game-thumb game-thumb-empty" aria-hidden="true"></div>
+    {% endif %}
+    <div>
+      <h1>{{ game.name }}</h1>
+      {% if bgg %}
+      <div class="game-meta">Released: {{ bgg.year or "—" }}</div>
+      <div class="game-meta">Author: {{ bgg.designers | join(", ") or "—" }}</div>
+      {% endif %}
+    </div>
+  </div>
   <a class="btn btn-primary" href="/games/{{ game.key }}/new">+ New match</a>
 </div>
+
+{% block intro %}{% endblock %}
 
 <section class="summary">
   {% for label, value in summary %}
@@ -41,7 +56,7 @@
   {% for m in matches %}
   <li class="match">
     <div class="match-main">
-      <span class="match-date">{{ m.played_on }}</span>
+      <span class="match-date">{{ m.played_on }}{% if m.played_at %} {{ m.played_at }}{% endif %}</span>
       {% if m.details.format %}<span class="tag">{{ m.details.format }}</span>{% endif %}
       {% if m.details.turns %}<span class="tag">{{ m.details.turns }} turns</span>{% endif %}
     </div>

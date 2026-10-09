@@ -1,6 +1,8 @@
 from collections import defaultdict
 from dataclasses import dataclass
 
+from .. import bgg
+
 
 @dataclass(frozen=True)
 class Field:
@@ -50,10 +52,17 @@ class Game:
 
     key: str = ""
     name: str = ""
+    # BoardGameGeek thing id, used for the thumbnail, release year and designer.
+    bgg_id: int | None = None
     max_players: int = 4
     match_fields: tuple[Field, ...] = ()
     # Fields recorded once per player (e.g. deck, character, faction).
     player_fields: tuple[Field, ...] = ()
+    # Page template for this game's stats page. Games with a custom page set their own.
+    template: str = "game.html"
+
+    def bgg_info(self) -> "bgg.BggInfo | None":
+        return bgg.fetch(self.bgg_id) if self.bgg_id else None
 
     # ---- form handling -------------------------------------------------
 
@@ -67,7 +76,7 @@ class Game:
             if value is not None:
                 details[f.name] = value
 
-        winner = form.get("winner", "")
+        winners = set(form.getlist("winner"))
         participants: list[dict] = []
         for i in range(self.max_players):
             name = (form.get(f"player_{i}_name") or "").strip()
@@ -79,7 +88,7 @@ class Game:
                 if value is not None:
                     player_details[f.name] = value
             participants.append(
-                {"player": name, "won": str(i) == winner, "details": player_details}
+                {"player": name, "won": str(i) in winners, "details": player_details}
             )
 
         if len(participants) < 2:

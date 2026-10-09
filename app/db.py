@@ -5,10 +5,11 @@ from contextlib import contextmanager
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS matches (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    game      TEXT NOT NULL,
-    played_on TEXT NOT NULL,
-    details   TEXT NOT NULL DEFAULT '{}',
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    game       TEXT NOT NULL,
+    played_on  TEXT NOT NULL,
+    played_at  TEXT,
+    details    TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -18,6 +19,21 @@ CREATE TABLE IF NOT EXISTS participants (
     player   TEXT NOT NULL,
     won      INTEGER NOT NULL DEFAULT 0,
     details  TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS games (
+    key        TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    bgg_id     INTEGER,
+    year       TEXT,
+    designers  TEXT NOT NULL DEFAULT '[]',
+    thumbnail  TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_matches_game ON matches(game, played_on);
@@ -49,13 +65,65 @@ def connect():
 def init_db() -> None:
     with connect() as conn:
         conn.executescript(SCHEMA)
+        try:
+            conn.execute("ALTER TABLE matches ADD COLUMN played_at TEXT")
+        except sqlite3.OperationalError:
+            pass  # already added by a previous run
 
 
-def insert_match(game: str, played_on: str, details: dict, participants: list[dict]) -> int:
+def load_added_games() -> list[dict]:
+    """Games added from BoardGameGeek search (not defined in code)."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT key, name, bgg_id, year, designers, thumbnail FROM games ORDER BY name"
+        ).fetchall()
+    return [
+        {**dict(r), "designers": json.loads(r["designers"])} for r in rows
+    ]
+
+
+def save_added_game(key: str, name: str, bgg_id: int, year: str | None,
+                    designers: list[str], thumbnail: str | None) -> None:
+    with connect() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO games (key, name, bgg_id, year, designers, thumbnail) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (key, name, bgg_id, year, json.dumps(designers), thumbnail),
+        )
+
+
+def get_setting(key: str) -> str | None:
+    with connect() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    return row["value"] if row else None
+
+
+def set_setting(key: str, value: str) -> None:
+    with connect() as conn:
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, value),
+        )
+
+
+def recently_played_games(limit: int = 10) -> list[str]:
+    """Game keys with at least one match, most recently played first."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT game FROM matches "
+            "GROUP BY game ORDER BY MAX(played_on || ' ' || COALESCE(played_at, '')) DESC "
+            "LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [r["game"] for r in rows]
+
+
+def insert_match(game: str, played_on: str, played_at: str | None, details: dict, participants: list[dict]) -> int:
     with connect() as conn:
         cur = conn.execute(
-            "INSERT INTO matches (game, played_on, details) VALUES (?, ?, ?)",
-            (game, played_on, json.dumps(details)),
+            "INSERT INTO matches (game, played_on, played_at, details) VALUES (?, ?, ?, ?)",
+            (game, played_on, played_at, json.dumps(details)),
         )
         match_id = cur.lastrowid
         conn.executemany(
@@ -75,12 +143,12 @@ def delete_match(game: str, match_id: int) -> None:
 
 def load_matches(game: str | None = None, limit: int | None = None) -> list[dict]:
     """Return matches (newest first) with their participants attached."""
-    sql = "SELECT id, game, played_on, details FROM matches"
+    sql = "SELECT id, game, played_on, played_at, details FROM matches"
     args: list = []
     if game is not None:
         sql += " WHERE game = ?"
         args.append(game)
-    sql += " ORDER BY played_on DESC, id DESC"
+    sql += " ORDER BY played_on DESC, played_at DESC, id DESC"
     if limit is not None:
         sql += " LIMIT ?"
         args.append(limit)
@@ -110,6 +178,7 @@ def load_matches(game: str | None = None, limit: int | None = None) -> list[dict
             "id": r["id"],
             "game": r["game"],
             "played_on": r["played_on"],
+            "played_at": r["played_at"],
             "details": json.loads(r["details"]),
             "participants": participants[r["id"]],
         }

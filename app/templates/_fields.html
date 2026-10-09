@@ -15,7 +15,8 @@
          {% if f.kind == 'number' %}inputmode="numeric" min="0"{% endif %}
          name="{{ f.name }}" value="{{ value or '' }}"
          {% if listid %}list="{{ listid }}"{% endif %}
-         autocomplete="off" {% if f.required %}required{% endif %}>
+         autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other"
+         {% if f.required %}required{% endif %}>
   {%- endif %}
 </label>
 {%- endmacro %}
