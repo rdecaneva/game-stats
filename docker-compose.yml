@@ -1,5 +1,9 @@
 services:
   web:
+    networks:
+      default:
+      decan-cloud:
+        aliases: [stats]
     build: .
     ports:
       - "${PORT:-8080}:8000"
@@ -8,3 +12,8 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+
+networks:
+  decan-cloud:
+    external: true
+    name: decan-cloud-services
