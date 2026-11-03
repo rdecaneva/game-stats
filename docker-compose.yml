@@ -5,6 +5,9 @@ services:
       decan-cloud:
         aliases: [stats]
     build: .
+    environment:
+      # Trust forwarded HTTPS/client headers only from the shared proxy network.
+      FORWARDED_ALLOW_IPS: ${INGRESS_PROXY_CIDR:-172.25.0.0/16}
     ports:
       - "${PORT:-8080}:8000"
     volumes:
